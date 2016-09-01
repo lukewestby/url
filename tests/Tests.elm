@@ -49,6 +49,17 @@ all =
                             , ( "blah", "42" )
                             ]
                         )
+        , test "handles empty string query values properly" <|
+            \() ->
+                "foo/bar?baz&blah&bar=42&foo"
+                    |> Expect.equal
+                        (Encode.encode [ "foo", "bar" ]
+                            [ ( "baz", "" )
+                            , ( "blah", "" )
+                            , ( "bar", "42" )
+                            , ( "foo", "" )
+                            ]
+                        )
         , fuzz (list (tuple ( string, string ))) "works with arbitrary query params" <|
             \pairs ->
                 let
@@ -63,16 +74,18 @@ all =
                         else
                             "?" ++ withoutQuestionMark
                 in
-                    result
-                        |> Expect.equal
-                            (Encode.encode [ "foo", "bar" ]
-                                [ ( "baz", "qux" )
-                                , ( "blah", "42" )
-                                ]
-                            )
+                    ("foo/bar" ++ result)
+                        |> Expect.equal (Encode.encode [ "foo", "bar" ] pairs)
         ]
 
 
 queryFromPair : ( String, String ) -> String
 queryFromPair ( key, value ) =
-    Http.uriEncode key ++ "=" ++ Http.uriEncode value
+    let
+        encodedKey =
+            Http.uriEncode key
+    in
+        if String.isEmpty value then
+            encodedKey
+        else
+            encodedKey ++ "=" ++ Http.uriEncode value
