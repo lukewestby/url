@@ -33,4 +33,46 @@ all =
                     |> List.map Http.uriEncode
                     |> String.join "/"
                     |> Expect.equal (Encode.encode parts [])
+        , test "works with one query param" <|
+            \() ->
+                "foo/bar?baz=qux"
+                    |> Expect.equal
+                        (Encode.encode [ "foo", "bar" ]
+                            [ ( "baz", "qux" ) ]
+                        )
+        , test "works with multiple query params" <|
+            \() ->
+                "foo/bar?baz=qux&blah=42"
+                    |> Expect.equal
+                        (Encode.encode [ "foo", "bar" ]
+                            [ ( "baz", "qux" )
+                            , ( "blah", "42" )
+                            ]
+                        )
+        , fuzz (list (tuple ( string, string ))) "works with arbitrary query params" <|
+            \pairs ->
+                let
+                    withoutQuestionMark =
+                        pairs
+                            |> List.map queryFromPair
+                            |> String.join "&"
+
+                    result =
+                        if String.isEmpty withoutQuestionMark then
+                            ""
+                        else
+                            "?" ++ withoutQuestionMark
+                in
+                    result
+                        |> Expect.equal
+                            (Encode.encode [ "foo", "bar" ]
+                                [ ( "baz", "qux" )
+                                , ( "blah", "42" )
+                                ]
+                            )
         ]
+
+
+queryFromPair : ( String, String ) -> String
+queryFromPair ( key, value ) =
+    Http.uriEncode key ++ "=" ++ Http.uriEncode value
